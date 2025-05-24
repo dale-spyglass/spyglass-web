@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  stripeCustomerId String?
+  subscription  Subscription?
+  traces        Trace[]
+  alerts        Alert[]
+}
+
+model Subscription {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  stripeSubscriptionId String
+  status        String
+  priceId       String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Trace {
+  id            String    @id @default(cuid())
+  traceId       String    @unique
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  name          String
+  duration      Float
+  startTime     DateTime
+  endTime       DateTime
+  status        String
+  metadata      Json?
+  parentId      String?
+  spans         Json?     // Store OpenTelemetry spans
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Alert {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  title         String
+  description   String
+  severity      String
+  status        String    @default("open")
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  jiraTicketId  String?
+}
+
+model AIMetric {
+  id                String   @id @default(cuid())
+  requestId         String   @unique
+  timestamp         DateTime @default(now())
+  provider          String   // OpenAI, Anthropic, etc.
+  model            String   // gpt-4-turbo, etc.
+  promptTokens      Int
+  completionTokens  Int
+  totalTokens       Int
+  latencyMs         Int
+  costUsd           Float
+  statusCode        Int
+  traceId          String
+  userId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([traceId])
+}
